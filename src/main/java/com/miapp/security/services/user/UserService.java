@@ -1,5 +1,8 @@
 package com.miapp.security.services.user;
 
+import com.miapp.security.dto.LoginRequest;
+import com.miapp.security.token.JwtTokenProvider;
+import com.miapp.sistemasdistribuidos.dto.UsuarioCreateDTO;
 import com.miapp.sistemasdistribuidos.entity.Usuario;
 import com.miapp.sistemasdistribuidos.entity.Rol;
 
@@ -10,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -19,6 +23,39 @@ import java.util.Collections;
 public class UserService implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    public void register(UsuarioCreateDTO userDto) {
+        // Crear un nuevo usuario y guardarlo en la base de datos
+        Usuario usuario = new Usuario();
+        usuario.setNombre(userDto.getNombre());
+        usuario.setEmail(userDto.getEmail());
+        // Encriptar la contraseña
+        usuario.setContrasena(passwordEncoder.encode(userDto.getContrasena()));
+        usuario.setActivo(userDto.getActivo());
+        usuario.setBio(userDto.getBio());
+        usuario.setDireccion(userDto.getDireccion());
+        usuario.setTelefono(userDto.getTelefono());
+        Rol rol = new Rol( 1,"USER","usuario comun");
+        usuario.setRolId(rol);
+        // otros campos (estoy cansado jefe)
+        userRepository.save(usuario);
+    }
+
+    public String login(LoginRequest loginRequest) {
+        // Lógica para validar el usuario y generar el token
+        // Suponiendo que tienes un método para verificar el usuario:
+        Usuario user = userRepository.findByEmail(loginRequest.getEmail());
+        if (user != null && passwordEncoder.matches(loginRequest.getContrasena(), user.getContrasena())) {
+            return jwtTokenProvider.generateToken(user.getNombre());
+        }
+        throw new RuntimeException("Invalid credentials");
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
