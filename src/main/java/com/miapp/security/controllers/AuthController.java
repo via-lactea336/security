@@ -4,6 +4,7 @@ import com.miapp.security.dto.JwtResponse;
 import com.miapp.security.dto.LoginRequest;
 import com.miapp.sistemasdistribuidos.dto.UsuarioCreateDTO;
 import com.miapp.security.services.user.UserService;
+import com.miapp.security.token.JwtTokenProvider;  // Asegúrate de importar JwtTokenProvider
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;  // Inyectar JwtTokenProvider
 
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@RequestBody UsuarioCreateDTO userDto) {
@@ -29,7 +33,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> loginUser(@RequestBody LoginRequest loginRequest) {
         try {
-            String token = userService.login(loginRequest);
+            // Pasar jwtTokenProvider como argumento
+            String token = userService.login(loginRequest, jwtTokenProvider);
             return ResponseEntity.ok(new JwtResponse(token));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);

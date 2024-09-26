@@ -4,13 +4,13 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
@@ -23,20 +23,20 @@ public class JwtTokenProvider {
 
     // Método para generar un token JWT
     public String generateToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(username)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-                .signWith(SignatureAlgorithm.HS512, secretKey)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
     // Método para validar un token JWT
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (ExpiredJwtException e) {
             // Token expirado
@@ -49,7 +49,8 @@ public class JwtTokenProvider {
 
     // Método para obtener el nombre de usuario del token
     public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         return claims.getSubject();
     }
 

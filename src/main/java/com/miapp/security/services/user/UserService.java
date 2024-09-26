@@ -8,6 +8,7 @@ import com.miapp.sistemasdistribuidos.entity.Rol;
 
 import com.miapp.security.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -26,9 +28,6 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     public void register(UsuarioCreateDTO userDto) {
         // Crear un nuevo usuario y guardarlo en la base de datos
@@ -41,13 +40,14 @@ public class UserService implements UserDetailsService {
         usuario.setBio(userDto.getBio());
         usuario.setDireccion(userDto.getDireccion());
         usuario.setTelefono(userDto.getTelefono());
-        Rol rol = new Rol( 1,"USER","usuario comun");
+        Rol rol = new Rol();
+        rol.setRolId(Integer.parseInt(userDto.getRolId()));
         usuario.setRolId(rol);
-        // otros campos (estoy cansado jefe)
+        usuario.setCreatedAt(LocalDateTime.now());
         userRepository.save(usuario);
     }
 
-    public String login(LoginRequest loginRequest) {
+    public String login(LoginRequest loginRequest, JwtTokenProvider jwtTokenProvider) {
         // Lógica para validar el usuario y generar el token
         // Suponiendo que tienes un método para verificar el usuario:
         Usuario user = userRepository.findByEmail(loginRequest.getEmail());
@@ -58,8 +58,8 @@ public class UserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Usuario user = userRepository.findByUsername(username);
+    public UserDetails loadUserByUsername(String nombre) throws UsernameNotFoundException {
+        Usuario user = userRepository.findByNombre(nombre);
         if (user == null) {
             throw new UsernameNotFoundException("User not found");
         }
