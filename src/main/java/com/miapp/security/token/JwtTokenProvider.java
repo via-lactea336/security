@@ -22,10 +22,11 @@ public class JwtTokenProvider {
     private long expirationTime; // Tiempo de expiración del token
 
     // Método para generar un token JWT
-    public String generateToken(String username) {
+    public String generateToken(String username,String role) {
         SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", "ROLE_" + role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -53,6 +54,14 @@ public class JwtTokenProvider {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         return claims.getSubject();
     }
+
+    // En JwtTokenProvider
+    public String getRoleFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        return claims.get("role", String.class);
+    }
+
 
     public String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");

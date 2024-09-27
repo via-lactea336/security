@@ -52,7 +52,7 @@ public class UserService implements UserDetailsService {
         // Suponiendo que tienes un método para verificar el usuario:
         Usuario user = userRepository.findByEmail(loginRequest.getEmail());
         if (user != null && passwordEncoder.matches(loginRequest.getContrasena(), user.getContrasena())) {
-            return jwtTokenProvider.generateToken(user.getNombre());
+            return jwtTokenProvider.generateToken(user.getNombre(),user.getRolId().getNombreRol());
         }
         throw new RuntimeException("Invalid credentials");
     }
@@ -74,7 +74,8 @@ public class UserService implements UserDetailsService {
     }
 
     private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Rol rol) {
-        return Collections.singleton(new SimpleGrantedAuthority(rol.getNombreRol()));
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + rol.getNombreRol()));
     }
+
 
 }
