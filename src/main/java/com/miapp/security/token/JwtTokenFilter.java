@@ -1,6 +1,5 @@
 package com.miapp.security.token;
 
-import com.miapp.security.services.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,33 +37,48 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String token = jwtTokenProvider.resolveToken(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            String username = jwtTokenProvider.getUsernameFromToken(token);
-            String role = jwtTokenProvider.getRoleFromToken(token);
-            logger.info("Token Username: {}", username);
-            logger.info("Role from Token: {}", role);
+        try {
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                String username = jwtTokenProvider.getUsernameFromToken(token);
+                String role = jwtTokenProvider.getRoleFromToken(token);
+                logger.info("Token Username: {}", username);
+                logger.info("Role from Token: {}", role);
 
-            // Solo proceder si no hay autenticación previa en el contexto
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                logger.info("Authorities from UserDetails: ");
-                for (GrantedAuthority authority : userDetails.getAuthorities()) {
-                    logger.info("Authority: {}", authority.getAuthority());
-                }
-                // Asegurarse de que las autoridades incluyen el rol del token
-                if (userDetails.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(role))) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    logger.info("Authentication successful for user: {}", username);
-                } else {
-                    logger.warn("Role mismatch. Token role: {}, UserDetails roles: {}", role, userDetails.getAuthorities());
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    logger.info("Authorities from UserDetails: ");
+                    for (GrantedAuthority authority : userDetails.getAuthorities()) {
+                        logger.info("Authority: {}", authority.getAuthority());
+                    }
+
+                    if (userDetails.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals(role))) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        logger.info("Authentication successful for user: {}", username);
+                    } else {
+                        logger.warn("Role mismatch. Token role: {}, UserDetails roles: {}", role, userDetails.getAuthorities());
+                        throw new ServletException("No tiene los permisos necesarios para acceder a este recurso.");
+                    }
                 }
             }
+
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Manejar token expirado
+            logger.error("Error de autorización: Token expirado", e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"El token ha expirado.\"}");
+            return;
+        } catch (Exception e) {
+            logger.error("Error de autorización: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"No tiene permisos para acceder a este recurso.\"}");
+            return;
         }
 
         chain.doFilter(request, response);
     }
-
 }

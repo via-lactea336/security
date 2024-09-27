@@ -41,7 +41,7 @@ public class JwtTokenProvider {
             return true;
         } catch (ExpiredJwtException e) {
             // Token expirado
-            return false;
+            throw e;
         } catch (Exception e) {
             // Otros errores de validación
             return false;

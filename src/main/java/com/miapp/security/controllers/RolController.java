@@ -22,7 +22,7 @@ public class RolController {
     private RolService rolService;
 
     // Obtener Roles paginados
-    @PreAuthorize("hasRole('USER')")
+    //@PreAuthorize("hasRole('USER')")
     @GetMapping
     public ResponseEntity<Page<RolDTO>> getAllRoles(
             @RequestParam(defaultValue = "0") int page
